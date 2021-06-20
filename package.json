@@ -1,0 +1,16 @@
+{
+  "name": "jumpscript-builder",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "build.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "0BSD",
+  "dependencies": {
+    "nunjucks": "^3.2.3"
+  }
+}
