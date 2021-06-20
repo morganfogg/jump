@@ -1,16 +1,25 @@
 # Jump - Bookmark directories in the terminal (Fish version).
-# This version is designed for Windows Subsystem for Linux (WSL)
+{{note}}
 # Get the latest version from https://github.com/morganfogg/jump
 
+{% if isWSL %}
 set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+{% else %}
+set JUMPFILE "$HOME/jump.tsv"
+{% endif %}
 
 function jump
     if  [ ! -e "$JUMPFILE" ]
         printf "Name\tPath\n" > "$JUMPFILE"
     end
     set -l match
-    set -l native_wd (wslpath -w (pwd))
+    {% if pathToNativeConverter %}
+    set -l native_wd ({{pathToNativeConverter}} (pwd))
+    {% else %}
+    set -l native_wd (pwd)
+    {% endif %}
 
+    {% if pathFromNativeConverter or pathToNativeConverter %}
     # From https://www.gnu.org/software/gawk/manual/html_node/Shell-Quoting.html
     set -l SHELL_QUOTE '
         function shell_quote(s,
@@ -30,6 +39,7 @@ function jump
             return ret
         }
         '
+    {% endif %}
     switch "$argv[1]"
         case "-c"
             if [ -z "$argv[2]" ]
@@ -73,8 +83,12 @@ function jump
             if [ -n "$1" ]
                 set match (awk -F "\t" -v name="$1" "$SHELL_QUOTE"'
                     NR > 1 && tolower(name) == tolower($1) {
-                        "wslpath -u " shell_quote($2) | getline result
+                        {% if pathFromNativeConverter %}
+                        "{{ pathFromNativeConverter }} " shell_quote($2) | getline result
                         print result
+                        {% else %}
+                        print $2
+                        {% endif %}
                         exit
                     }
                 ' "$JUMPFILE")
@@ -87,8 +101,12 @@ function jump
                 awk -F "\t" "$SHELL_QUOTE"'
                     NR == 1 { next }
                     {
-                        "wslpath -u " shell_quote($2) | getline result
+                        {% if pathFromNativeConverter %}
+                        "{{pathFromNativeConverter}} " shell_quote($2) | getline result
                         results[$1] = result
+                        {% else %}
+                        results[$1] = $2
+                        {% endif %}
                         if (length($1) > maxlength) {
                             maxlength = length($1);
                         }
@@ -119,7 +137,11 @@ function jump
             else if [ "$result_count" -gt 1 ]
                 printf "Jumpfile invalid: Duplicate entries of bookmark %s\n. Please delete this bookmark and then recreate it, or edit the jumpfile manually to remove the duplicate.\n" "$1"
             else
-                cd (wslpath -u "$match"); or return 1
+                {% if pathFromNativeConverter %}
+                cd ({{pathFromNativeConverter}} "$match"); or return 1
+                {% else %}
+                cd "$match"; or return 1
+                {%- endif %}
             end
     end
 end

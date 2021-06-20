@@ -28,22 +28,32 @@ git clone https://github.com/morganfogg/jump.git ~/.jumpscripts
 
 Then load it from your profile:
 
-#### Bash, Zsh and Fish
+#### Bash and Zsh
 
-Add the following to the bottom of your `~/.bashrc`, `~/.zshrc` or `~/config/fish/config.fish` respectively.
+Add the following to the bottom of your `~/.bashrc` or `~/.zshrc`.
 
 ```sh
-. ~/.jumpscripts/[jump-script-name]
+. ~/.jumpscripts/sh/[name].sh
 ```
 
-Replacing `[jump-script-name]` with the name of the relevant script for your shell and environment.
+Replacing `[name]` with the name of the relevant script for your environment.
 
-#### Powershell
+#### Fish
+
+Add to the bottom of your `~/config/fish/config.fish`
+
+```fish
+source ~/.jumpscripts/fish/[name].fish
+```
+
+Replacing `[name]` with the name of the relevant script for your environment.
+
+#### PowerShell
 
 Add this to the bottom of your `$PROFILE`
 
 ```powershell
-. "$HOME/.jumpscripts/powershell.ps1"
+. "$HOME/.jumpscripts/powershell/regular.ps1"
 ```
 
 If this fails to load, you may need to first update your exection policy to allow script execution.
@@ -57,10 +67,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 In Bash, Zsh and Fish, Jump is used through the `jump` or `j` command.
 
 ```sh
-j -c [name]   # Create a new bookmark which points to the working directory
+j -c [name]   # Add a new bookmark which points to the working directory
 j [name]      # Go to bookmark
-j -d [name]   # Delete bookmark
-j -l          # List all bookmarks
+j -r [name]   # Delete bookmark
+j -g          # List all bookmarks, or print a bookmark's path if a name is provided
 ```
 
 In Powershell, Jump follows the standard Verb-Noun naming convention. The commands are:
