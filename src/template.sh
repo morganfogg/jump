@@ -3,27 +3,18 @@
 # Get the latest version from https://github.com/morganfogg/jump
 
 {% if isWSL %}
+# Get the jumpfile in the user's actual home directory, rather than their WSL home.
+# NOTE: There has to be a better way to do this.
 JUMPFILE="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
 {% else %}
 JUMPFILE="$HOME/jump.tsv"
 {% endif %}
 
 jump() {
-    if  [ ! -e "$JUMPFILE" ] ; then
-        printf "Name\tPath\n" > "$JUMPFILE"
-    fi
-
-    {% if addCRLFCorrection %}
-    sed -i 's/\r\n/\n/g' "$JUMPFILE" # Correct CRLF line endings
-    {% endif %}
-
-    local match
-    local native_wd
-    {% if pathToNativeConverter %}
-    native_wd="$({{pathToNativeConverter}} "$(pwd)")"
-    {% else %}
-    native_wd="$(pwd)"
-    {% endif %}
+    local GET_BOOKMARK_PATH_SCRIPT
+    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
+    local REMOVE_BOOKMARK_SCRIPT
+    REMOVE_BOOKMARK_SCRIPT='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
     {% if pathFromNativeConverter or pathToNativeConverter %}
     # From https://www.gnu.org/software/gawk/manual/html_node/Shell-Quoting.html
     local SHELL_QUOTE
@@ -47,13 +38,29 @@ jump() {
         '
     {% endif %}
 
+    if  [ ! -e "$JUMPFILE" ] ; then
+        printf "Name\tPath\n" > "$JUMPFILE"
+    fi
+
+    {% if addCRLFCorrection %}
+    sed -i 's/\r\n/\n/g' "$JUMPFILE" # Correct CRLF line endings
+    {% endif %}
+
+    local match
+    local native_wd
+    {% if pathToNativeConverter %}
+    native_wd="$({{pathToNativeConverter}} "$(pwd)")"
+    {% else %}
+    native_wd="$(pwd)"
+    {% endif %}
+
     case $1 in
         -c) shift
             if [ -z "$1" ]; then
                 echo "Specify the name of the bookmark"
                 return 1
             fi
-            match="$(awk -F "\t" -v name="$1" 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}' "$JUMPFILE")"
+            match="$(awk -F "\t" -v name="$1" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
                 printf "%s\t%s\n" "$1" "$native_wd" >> "$JUMPFILE"
                 printf "Created bookmark %s to %s\n" "$1" "$(pwd)"
@@ -63,7 +70,7 @@ jump() {
                 case "$REPLY" in
                     y|Y|yes|Yes|YES)
                         local updated
-                        updated=$(awk -F "\t" -v name="$1" 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}' "$JUMPFILE")
+                        updated=$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")
                         printf "Name\tPath\n" > "$JUMPFILE"
                         printf "%s\n" "$updated" >> "$JUMPFILE"
                         printf "%s\t%s\n" "$1" "$native_wd" >> "$JUMPFILE"
@@ -82,13 +89,13 @@ jump() {
                 echo "Specify the name of the bookmark"
                 return 1
             fi
-            match="$(awk -F "\t" -v name="$1" 'tolower(name) == tolower($1) {print $2}' "$JUMPFILE")"
+            match="$(awk -F "\t" -v name="$1" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
                 echo "No such bookmark"
                 return 1
             else
                 local updated
-                updated=$(awk -F "\t" -v name="$1" 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}' "$JUMPFILE")
+                updated=$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")
                 printf "Name\tPath\n%s\n" "$updated" > "$JUMPFILE"
                 echo "Bookmark deleted"
             fi
@@ -146,7 +153,7 @@ jump() {
         ;;
         *)
             local result_count;
-            match="$(awk -F "\t" -v name="$1" 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}' "$JUMPFILE")"
+            match="$(awk -F "\t" -v name="$1" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             result_count="$(printf "%s" "$match" | wc -l)"
             if [ -z "$match" ]; then
                 echo "No such bookmark"
@@ -158,7 +165,7 @@ jump() {
                 cd "$({{pathFromNativeConverter}} "$match")" || return 1
                 {% else %}
                 cd "$match" || return 1
-                {%- endif %}
+                {% endif %}
             fi
         ;;
     esac

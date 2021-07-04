@@ -1,5 +1,5 @@
 # Jump - Bookmark directories in the terminal (PowerShell version)
-# Get the latest version from https://github.com/morganfogg/jump
+# https://github.com/morganfogg/jump
 
 if (!(Test-Path "$HOME/jump.tsv")) {
   New-Item -Path $HOME -Name "jump.tsv" -Type "file" -Value "Name`tPath"

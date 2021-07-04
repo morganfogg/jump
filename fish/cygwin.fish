@@ -5,12 +5,8 @@
 set JUMPFILE "$HOME/jump.tsv"
 
 function jump
-    if  [ ! -e "$JUMPFILE" ]
-        printf "Name\tPath\n" > "$JUMPFILE"
-    end
-    set -l match
-    set -l native_wd (cygpath -w (pwd))
-
+    set -l GET_BOOKMARK_PATH_SCRIPT 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
+    set -l REMOVE_BOOKMARK_SCRIPT 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
     # From https://www.gnu.org/software/gawk/manual/html_node/Shell-Quoting.html
     set -l SHELL_QUOTE '
         function shell_quote(s,
@@ -30,13 +26,21 @@ function jump
             return ret
         }
         '
+
+    if  [ ! -e "$JUMPFILE" ]
+        printf "Name\tPath\n" > "$JUMPFILE"
+    end
+
+    set -l match
+    set -l native_wd (cygpath -w (pwd))
+
     switch "$argv[1]"
         case "-c"
             if [ -z "$argv[2]" ]
                 echo "Specify the name of the bookmark"
                 return 1
             end
-            set match (awk -F "\t" -v name="$argv[2]" 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}' "$JUMPFILE")
+            set match (awk -F "\t" -v name="$argv[2]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
             if [ -z "$match" ]
                 printf "%s\t%s\n" "$argv[2]" "$native_wd" >> "$JUMPFILE"
                 printf "Created bookmark %s to %s\n" "$argv[2]" (pwd)
@@ -45,7 +49,7 @@ function jump
                 read -P "Choose> " REPLY
                 switch "$REPLY"
                     case y Y yes Yes YES
-                        set -l updated (awk -F "\t" -v name="$argv[2]" 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print}' "$JUMPFILE" | string split0)
+                        set -l updated (awk -F "\t" -v name="$argv[2]" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE" | string split0)
                         printf "Name\tPath\n" > "$JUMPFILE"
                         printf "%s\n" "$updated" >> "$JUMPFILE"
                         printf "%s\t%s\n" "$argv[2]" "$native_wd" >> "$JUMPFILE"
@@ -60,12 +64,12 @@ function jump
                 echo "Specify the name of the bookmark"
                 return 1
             end
-            set match (awk -F "\t" -v name="$argv[2]" 'NF >  1&& tolower(name) == tolower($1) {print $2}' "$JUMPFILE")
+            set match (awk -F "\t" -v name="$argv[2]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
             if [ -z "$match" ]
                 echo "No such bookmark"
                 return 1
             else
-                set -l updated (awk -F "\t" -v name="$argv[2]" 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print}' "$JUMPFILE" | string split0)
+                set -l updated (awk -F "\t" -v name="$argv[2]" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE" | string split0)
                 printf "Name\tPath\n%s\n" "$updated" > "$JUMPFILE"
                 echo "Bookmark deleted"
             end
@@ -111,7 +115,7 @@ function jump
         case "-?*"
             echo "Unrecognized option. See 'jump --help'"
         case "*"
-            set match (awk -F "\t" -v name="$argv[1]" 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}' "$JUMPFILE")
+            set match (awk -F "\t" -v name="$argv[1]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
             set -l result_count (printf "%s" "$match" | wc -l)
             if [ -z "$match" ]
                 echo "No such bookmark"

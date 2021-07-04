@@ -51,6 +51,7 @@ async function main() {
     ], {
         lstripBlocks: true,
         trimBlocks: true,
+        autoescape: false,
     });
 
     for (let shell of shells) {
