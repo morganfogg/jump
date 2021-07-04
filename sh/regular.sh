@@ -36,7 +36,7 @@ jump() {
                 case "$REPLY" in
                     y|Y|yes|Yes|YES)
                         local updated
-                        updated=$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")
+                        updated="$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")"
                         printf "Name\tPath\n" > "$JUMPFILE"
                         printf "%s\n" "$updated" >> "$JUMPFILE"
                         printf "%s\t%s\n" "$1" "$native_wd" >> "$JUMPFILE"
@@ -61,7 +61,7 @@ jump() {
                 return 1
             else
                 local updated
-                updated=$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")
+                updated="$(awk -F "\t" -v name="$1" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE")"
                 printf "Name\tPath\n%s\n" "$updated" > "$JUMPFILE"
                 echo "Bookmark deleted"
             fi
