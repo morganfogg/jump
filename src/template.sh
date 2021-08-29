@@ -2,17 +2,17 @@
 {{note}}
 # Get the latest version from https://github.com/morganfogg/jump
 
-{% if isWSL %}
-# Get the jumpfile in the user's actual home directory, rather than their WSL home.
+{% if pathFromNativeConverter %}
+# Get the jumpfile in the user's actual home directory, rather than their WSL/Cygwin home.
 # NOTE: There has to be a better way to do this.
-JUMPFILE="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
+JUMPFILE="$({{pathFromNativeConverter}} "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
 {% else %}
 JUMPFILE="$HOME/jump.tsv"
 {% endif %}
 
 jump() {
     local GET_BOOKMARK_PATH_SCRIPT
-    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
+    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
     local REMOVE_BOOKMARK_SCRIPT
     REMOVE_BOOKMARK_SCRIPT='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
     {% if pathFromNativeConverter %}
@@ -47,12 +47,6 @@ jump() {
     {% endif %}
 
     local match
-    local native_wd
-    {% if pathToNativeConverter %}
-    native_wd="$({{pathToNativeConverter}} "$(pwd)")"
-    {% else %}
-    native_wd="$(pwd)"
-    {% endif %}
 
     case $1 in
         -c)
@@ -63,6 +57,13 @@ jump() {
                 >&2 printf 'Too many arguments\n'
                 return 1
             fi
+            local native_wd
+            {% if pathToNativeConverter %}
+            native_wd="$({{pathToNativeConverter}} "$(pwd)")"
+            {% else %}
+            native_wd="$(pwd)"
+            {% endif %}
+
             match="$(awk -F '\t' -v name="$2" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
                 printf '%s\t%s\n' "$2" "$native_wd" >> "$JUMPFILE"

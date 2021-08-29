@@ -7,7 +7,7 @@ JUMPFILE="$HOME/jump.tsv"
 
 jump() {
     local GET_BOOKMARK_PATH_SCRIPT
-    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
+    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
     local REMOVE_BOOKMARK_SCRIPT
     REMOVE_BOOKMARK_SCRIPT='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
 
@@ -17,8 +17,6 @@ jump() {
 
 
     local match
-    local native_wd
-    native_wd="$(pwd)"
 
     case $1 in
         -c)
@@ -29,6 +27,9 @@ jump() {
                 >&2 printf 'Too many arguments\n'
                 return 1
             fi
+            local native_wd
+            native_wd="$(pwd)"
+
             match="$(awk -F '\t' -v name="$2" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
                 printf '%s\t%s\n' "$2" "$native_wd" >> "$JUMPFILE"
