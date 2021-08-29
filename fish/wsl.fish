@@ -2,9 +2,7 @@
 # This version is designed for Windows Subsystem for Linux (WSL)
 # Get the latest version from https://github.com/morganfogg/jump
 
-# Get the jumpfile in the user's actual home directory, rather than their WSL home.
-# NOTE: There has to be a better way to do this.
-set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+set JUMPFILE "$HOME/jump.tsv"
 
 function jump
     set -l GET_BOOKMARK_PATH_SCRIPT 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'

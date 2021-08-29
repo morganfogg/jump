@@ -5,7 +5,7 @@
 {% if isWSL %}
 # Get the jumpfile in the user's actual home directory, rather than their WSL home.
 # NOTE: There has to be a better way to do this.
-set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+set JUMPFILE ({{pathFromNativeConverter}} (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
 {% else %}
 set JUMPFILE "$HOME/jump.tsv"
 {% endif %}

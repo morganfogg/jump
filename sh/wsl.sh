@@ -2,13 +2,13 @@
 # This version is designed for Windows Subsystem for Linux (WSL)
 # Get the latest version from https://github.com/morganfogg/jump
 
-# Get the jumpfile in the user's actual home directory, rather than their WSL home.
+# Get the jumpfile in the user's actual home directory, rather than their WSL/Cygwin home.
 # NOTE: There has to be a better way to do this.
 JUMPFILE="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
 
 jump() {
     local GET_BOOKMARK_PATH_SCRIPT
-    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
+    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
     local REMOVE_BOOKMARK_SCRIPT
     REMOVE_BOOKMARK_SCRIPT='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
     # From https://www.gnu.org/software/gawk/manual/html_node/Shell-Quoting.html
@@ -39,8 +39,6 @@ jump() {
     sed -i 's/\r\n/\n/g' "$JUMPFILE" # Correct CRLF line endings
 
     local match
-    local native_wd
-    native_wd="$(wslpath -w "$(pwd)")"
 
     case $1 in
         -c)
@@ -51,6 +49,9 @@ jump() {
                 >&2 printf 'Too many arguments\n'
                 return 1
             fi
+            local native_wd
+            native_wd="$(wslpath -w "$(pwd)")"
+
             match="$(awk -F '\t' -v name="$2" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
                 printf '%s\t%s\n' "$2" "$native_wd" >> "$JUMPFILE"

@@ -18,8 +18,6 @@ const environments = [
         pathFromNativeConverter: 'wslpath -u',
         pathToNativeConverter: 'wslpath -w',
         note: () => '# This version is designed for Windows Subsystem for Linux (WSL)',
-        jumpfileLocation: '$HOME/jump.tsv',
-        isWSL: true,
     },
     {
         name: 'cygwin',
