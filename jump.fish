@@ -1,50 +1,58 @@
 # Jump - Bookmark directories in the terminal (Fish version).
-{{note}}
 # Get the latest version from https://github.com/morganfogg/jump
 
-{% if isWSL %}
-# Get the jumpfile in the user's actual home directory, rather than their WSL home.
-# NOTE: There has to be a better way to do this.
-set JUMPFILE ({{pathFromNativeConverter}} (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
-{% else %}
-set JUMPFILE "$HOME/jump.tsv"
-{% endif %}
+switch (uname -sv)
+  case '*Microsoft*' '*WSL*'
+    set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+    function __jump_path_to_native; wslpath -w "$argv[1]"; end
+    function __jump_path_from_native; wslpath -u "$argv[1]"; end
+    function __jump_list_bookmarks_script
+        paste (cut -f 1 "$JUMPFILE" | tail -n +2 | psub) (cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | xargs -0 -n1 wslpath -u | psub) | column -t
+    end
+  case '*CYGWIN*' '*MINGW*'
+    set JUMPFILE (cygpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+    function __jump_path_to_native; wslpath -w "$argv[1]"; end
+    function __jump_path_from_native; wslpath -u "$argv[1]"; end
+    function __jump_list_bookmarks_script
+        paste (cut -f 1 "$JUMPFILE" | tail -n +2 | psub) (cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | cygpath -u -f - | psub) | column -t
+    end
+  case '*'
+    set JUMPFILE "$HOME/jump.tsv"
+    function __jump_path_to_native; printf "%s\n" "$argv[1]"; end
+    function __jump_path_from_native; printf "%s\n" "$argv[1]"; end
+    function __jump_list_bookmarks_script; column -t "$JUMPFILE"; end
+end
+
+set __JUMP_AWK_SHELL_QUOTE '
+    function shell_quote(s,
+        SINGLE, QSINGLE, i, X, n, ret)
+    {
+        if (s == "")
+            return "\"\""
+
+        SINGLE = "\x27"  # single quote
+        QSINGLE = "\"\x27\""
+        n = split(s, X, SINGLE)
+
+        ret = SINGLE X[1] SINGLE
+        for (i = 2; i <= n; i++)
+            ret = ret QSINGLE SINGLE X[i] SINGLE
+
+        return ret
+    }
+    '
+
+set __JUMP_AWK_GET_BOOKMARK 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
+set __JUMP_AWK_REMOVE_BOOKMARAK 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
+
 
 function jump
-    set -l GET_BOOKMARK_PATH_SCRIPT 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2}'
-    set -l REMOVE_BOOKMARK_SCRIPT 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
-    {% if pathFromNativeConverter %}
-    # From https://www.gnu.org/software/gawk/manual/html_node/Shell-Quoting.html
-    set -l SHELL_QUOTE '
-        function shell_quote(s,
-            SINGLE, QSINGLE, i, X, n, ret)
-        {
-            if (s == "")
-                return "\"\""
-
-            SINGLE = "\x27"  # single quote
-            QSINGLE = "\"\x27\""
-            n = split(s, X, SINGLE)
-
-            ret = SINGLE X[1] SINGLE
-            for (i = 2; i <= n; i++)
-                ret = ret QSINGLE SINGLE X[i] SINGLE
-
-            return ret
-        }
-        '
-    {% endif %}
-
     if  [ ! -e "$JUMPFILE" ]
         printf 'Name\tPath\n' > "$JUMPFILE"
     end
 
     set -l match
-    {% if pathToNativeConverter %}
-    set -l native_wd ({{pathToNativeConverter}} (pwd))
-    {% else %}
-    set -l native_wd (pwd)
-    {% endif %}
+    set -l native_wd (__jump_path_to_native (pwd))
 
     switch "$argv[1]"
         case '-c'
@@ -55,7 +63,7 @@ function jump
                 printf 'Too many arguments\n' >&2
                 return 1
             end
-            set match (awk -F '\t' -v name="$argv[2]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
+            set match (awk -F '\t' -v name="$argv[2]" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")
             if [ -z "$match" ]
                 printf '%s\t%s\n' "$argv[2]" "$native_wd" >> "$JUMPFILE"
                 printf 'Created bookmark %s to %s\n' "$argv[2]" (pwd)
@@ -64,7 +72,7 @@ function jump
                 read -P 'Choose> ' REPLY
                 switch "$REPLY"
                     case y Y yes Yes YES
-                        set -l updated (awk -F '\t' -v name="$argv[2]" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE" | string split0)
+                        set -l updated (awk -F '\t' -v name="$argv[2]" "$__JUMP_AWK_REMOVE_BOOKMARAK" "$JUMPFILE" | string split0)
                         printf 'Name\tPath\n' > "$JUMPFILE"
                         printf '%s\n' "$updated" >> "$JUMPFILE"
                         printf '%s\t%s\n' "$argv[2]" "$native_wd" >> "$JUMPFILE"
@@ -74,7 +82,7 @@ function jump
                         return 1
                 end
             end
-        case "-d"
+        case '-d'
             if [ -z "$argv[2]" ]
                 echo 'Specify the name of the bookmark' >&2
                 return 1
@@ -82,12 +90,12 @@ function jump
                 printf 'Too many arguments\n' >&2
                 return 1
             end
-            set match (awk -F '\t' -v name="$argv[2]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
+            set match (awk -F '\t' -v name="$argv[2]" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")
             if [ -z "$match" ]
                 echo 'No such bookmark' >&2
                 return 1
             else
-                set -l updated (awk -F '\t' -v name="$argv[2]" "$REMOVE_BOOKMARK_SCRIPT" "$JUMPFILE" | string split0)
+                set -l updated (awk -F '\t' -v name="$argv[2]" "$__JUMP_AWK_REMOVE_BOOKMARAK" "$JUMPFILE" | string split0)
                 printf 'Name\tPath\n%s\n' "$updated" > "$JUMPFILE"
                 echo 'Bookmark deleted'
             end
@@ -99,12 +107,7 @@ function jump
             if [ -n "$1" ]
                 set match (awk -F "\t" -v name="$1" "$SHELL_QUOTE"'
                     NR > 1 && tolower(name) == tolower($1) {
-                        {% if pathFromNativeConverter %}
-                        "{{ pathFromNativeConverter }} " shell_quote($2) | getline result
-                        print result
-                        {% else %}
                         print $2
-                        {% endif %}
                         exit
                     }
                 ' "$JUMPFILE")
@@ -112,27 +115,9 @@ function jump
                     echo 'No such bookmark' >&2
                     return 1
                 end
-                printf '%s\n' "$match"
+                __jump_path_from_native "$match"
             else
-                awk -F "\t" "$SHELL_QUOTE"'
-                    NR == 1 { next }
-                    {
-                        {% if pathFromNativeConverter %}
-                        "{{pathFromNativeConverter}} " shell_quote($2) | getline result
-                        results[$1] = result
-                        {% else %}
-                        results[$1] = $2
-                        {% endif %}
-                        if (length($1) > maxlength) {
-                            maxlength = length($1);
-                        }
-                    }
-                    END {
-                        for (key in results) {
-                            printf "%" maxlength "s | %s\n", key, results[key]
-                        }
-                    }
-                ' "$JUMPFILE" | sort -b
+                __jump_list_bookmarks_script
             end
 
         case '--help' ''
@@ -149,7 +134,7 @@ function jump
                 printf 'Too many arguments\n' >&2
                 return 1
             end
-            set match (awk -F '\t' -v name="$argv[1]" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")
+            set match (awk -F '\t' -v name="$argv[1]" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")
             set -l result_count (printf '%s' "$match" | wc -l)
             if [ -z "$match" ]
                 echo 'No such bookmark' >&2
@@ -158,11 +143,7 @@ function jump
                 printf 'Jumpfile invalid: Duplicate entries of bookmark %s\n. Please delete this bookmark and then recreate it, or edit the jumpfile manually to remove the duplicate.\n' "$1" >&2
                 return 1
             end
-            {% if pathFromNativeConverter %}
-            cd ({{pathFromNativeConverter}} "$match"); or return 1
-            {% else %}
-            cd "$match"; or return 1
-            {% endif %}
+            cd ( __jump_path_from_native "$match"); or return 1
     end
 end
 
