@@ -14,7 +14,7 @@ function Open-Bookmark {
 
   process {
     try {
-      $result = @(Import-Csv -Delimiter "`t" "$HOME/jump.tsv") | Where-Object -Property "Name" -Like $Name;
+      $result = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv") | Where-Object -Property "Name" -Like $Name;
       if ($result.Count -eq 0) {
         throw [Exception]::new("No such bookmark exists");
       }
@@ -36,14 +36,14 @@ function Remove-Bookmark {
 
   process {
     try {
-      $oldData = @(Import-Csv -Delimiter "`t" "$HOME/jump.tsv");
+      $oldData = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
       $newData = $oldData | Where-Object -Property "Name" -NotLike $Name;
 
       if ($oldData.length -eq $newData.length) {
         throw [Exception]::new("No such bookmark to remove");
       }
 
-      $newData | Select-Object  "Name", "Path" | Export-Csv -Path "$HOME/jump.tsv" -Delimiter "`t" -UseQuotes Never;
+      $newData | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
     }
     catch {
       $PSCmdlet.ThrowTerminatingError($_);
@@ -59,7 +59,7 @@ function Get-Bookmark {
 
   process {
     try {
-      $data = @(Import-Csv -Delimiter "`t" "$HOME/jump.tsv");
+      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
 
       if (![string]::IsNullOrWhiteSpace($name)) {
         $data = $data | Where-Object -Property "Name" -Like $Name;
@@ -82,13 +82,13 @@ function Update-Bookmark {
 
   process {
     try {
-      $data = @(Import-Csv -Delimiter "`t" "$HOME/jump.tsv");
+      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
       $results = $data | Where-Object -Property "Name" -Like $Name;
       if ($results.length -eq 0) {
         throw [Exception]::new("No such bookmark to update");
       }
       $results[0].Path = Get-Location;
-      $data | Select-Object  "Name", "Path" | Export-Csv -Path "$HOME/jump.tsv" -Delimiter "`t" -UseQuotes Never;
+      $data | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
     }
     catch {
       $PSCmdlet.ThrowTerminatingError($_);
@@ -105,7 +105,7 @@ function Add-Bookmark {
 
   process {
     try {
-      $data = @(Import-Csv -Delimiter "`t" "$HOME/jump.tsv");
+      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
       $results = $data | Where-Object -Property "Name" -Like $Name;
       if ($results.length -ne 0) {
         throw [Exception]::new("A bookmark with that name already exists");
@@ -118,7 +118,7 @@ function Add-Bookmark {
 
       Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
 
-      $data | Select-Object "Name", "Path" | Export-Csv -Path "$HOME/jump.tsv" -Delimiter "`t" -UseQuotes Never;
+      $data | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
     }
     catch {
       $PSCmdlet.ThrowTerminatingError($_);
@@ -141,3 +141,4 @@ Set-Alias j Open-Bookmark;
 Set-Alias jr Remove-Bookmark;
 Set-Alias jg Get-Bookmark;
 Set-Alias jc Add-Bookmark;
+Set-Alias ju Update-Bookmark

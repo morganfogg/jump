@@ -1,20 +1,67 @@
 # Jump - Bookmark directories in the terminal (Bash/Zsh version)
-# NOTE: This particular version is intended for a regular Bash/Zsh environment on *nix systems. If you are running a Bash/Zsh
-# environment on Windows (such as Git Bash, WSL or Cygwin), see instead either sh/wsl.sh or sh/cygwin.sh
 # Get the latest version from https://github.com/morganfogg/jump
 
-JUMPFILE="$HOME/jump.tsv"
+case "$(uname -sv)" in
+  *Microsoft*|*WSL* )
+    JUMPFILE="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
+    __jump_path_to_native() { wslpath -w "$1"; }
+    __jump_path_from_native() { wslpath -u "$1"; }
+    __jump_list_bookmarks_script() {
+paste /dev/fd/3 3<<-EOF /dev/fd/4 4<<-EOF | column -t
+$(cut -f 1 "$JUMPFILE" | tail -n +2)
+EOF
+$(cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | xargs -0 -n1 wslpath -u)
+EOF
+    }
+  ;;
+  *CYGWIN*|*MINGW* )
+    JUMPFILE="$(cygpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
+    __jump_path_to_native() { cygpath -w "$1"; }
+    __jump_path_from_native() { cygpath -u "$1"; }
+    __jump_list_bookmarks_script() {
+paste /dev/fd/3 3<<-EOF /dev/fd/4 4<<-EOF | column -t
+$(cut -f 1 "$JUMPFILE" | tail -n +2)
+EOF
+$(cut -f 2 "$JUMPFILE" | tail -n +2 | cygpath -u -f -)
+EOF
+    }
+  ;;
+  *)
+    JUMPFILE="$HOME/jump.tsv"
+    __jump_path_to_native() { printf "%s\n" "$1"; }
+    __jump_path_from_native() { printf "%s\n" "$1"; }
+    __jump_list_bookmarks_script() { column -t "$JUMPFILE"; }
+  ;;
+esac
+
+__JUMP_AWK_SHELL_QUOTE='
+    function shell_quote(s,
+        SINGLE, QSINGLE, i, X, n, ret)
+    {
+        if (s == "")
+            return "\"\""
+
+        SINGLE = "\x27"  # single quote
+        QSINGLE = "\"\x27\""
+        n = split(s, X, SINGLE)
+
+        ret = SINGLE X[1] SINGLE
+        for (i = 2; i <= n; i++)
+            ret = ret QSINGLE SINGLE X[i] SINGLE
+
+        return ret
+    }
+    '
+
+__JUMP_AWK_GET_BOOKMARK='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
+__JUMP_AWK_REMOVE_BOOKMARAK='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
 
 jump() {
-    local GET_BOOKMARK_PATH_SCRIPT
-    GET_BOOKMARK_PATH_SCRIPT='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
-    local REMOVE_BOOKMARK_SCRIPT
-    REMOVE_BOOKMARK_SCRIPT='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
-
     if  [ ! -e "$JUMPFILE" ] ; then
         printf 'Name\tPath\n' > "$JUMPFILE"
     fi
 
+    sed -i 's/\r\n/\n/g' "$JUMPFILE" # Correct any CRLF line endings
 
     local match
 
@@ -28,7 +75,7 @@ jump() {
                 return 1
             fi
             local native_wd
-            native_wd="$(pwd)"
+            native_wd="$(__jump_path_to_native "$(pwd)")"
 
             match="$(awk -F '\t' -v name="$2" "$GET_BOOKMARK_PATH_SCRIPT" "$JUMPFILE")"
             if [ -z "$match" ]; then
@@ -89,22 +136,9 @@ jump() {
                     >&2 printf 'No such bookmark\n'
                     return 1
                 fi
-                printf '%s' "$match"
+                __jump_path_from_native "$match"
             else
-                awk -F "\t" "$SHELL_QUOTE"'
-                NR == 1 { next }
-                {
-                    results[$1] = $2
-                    if (length($1) > maxlength) {
-                        maxlength = length($1)
-                    }
-                }
-                END {
-                    for (key in results) {
-                        printf "%" maxlength "s | %s\n", key, results[key]
-                    }
-                }
-            ' "$JUMPFILE" | sort -b
+               __jump_list_bookmarks_script
             fi
         ;;
         --help|"")
@@ -133,7 +167,7 @@ jump() {
                 >&2 printf 'Jumpfile invalid: Duplicate entries of bookmark %s\n. Please delete this bookmark and then recreate it, or edit the jumpfile manually to remove the duplicate.\n' "$1"
                 return 1
             fi
-            cd "$match" || return 1
+            cd "$(__jump_path_from_native "$match")" || return 1
         ;;
     esac
 }

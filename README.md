@@ -8,15 +8,9 @@ between regular Powershell, WSL and Cygwin.
 
 The following environments are supported:
 
-- Bash, Zsh and other `sh`-like shells
-  - [Regular (for Linux & Mac)](./sh/regular.sh)
-  - [For Cygwin-based environments (MSYS2, Git Bash etc)](./sh/cygwin.sh)
-  - [For Windows Subsystem for Linux (WSL)](./sh/wsl.sh)
-- Fish
-  - [Regular](./fish/regular.fish)
-  - [Cygwin](./fish/cygwin.fish)
-  - [WSL](./fish/wsl.fish)
-- [PowerShell](./powershell/regular.ps1)
+- [Bash, Zsh and other `sh`-like shells](./jump.sh)
+- [Fish](./jump.fish)
+- [PowerShell](./jump.ps1)
 
 ## Setup
 
@@ -33,27 +27,23 @@ Then load it from your profile:
 Add the following to the bottom of your `~/.bashrc` or `~/.zshrc`.
 
 ```sh
-. ~/.jumpscripts/sh/[name].sh
+. ~/.jumpscripts/jump.sh
 ```
-
-Replacing `[name]` with the name of the relevant script for your environment.
 
 #### Fish
 
 Add to the bottom of your `~/config/fish/config.fish`
 
 ```fish
-source ~/.jumpscripts/fish/[name].fish
+source ~/.jumpscripts/jump.fish
 ```
-
-Replacing `[name]` with the name of the relevant script for your environment.
 
 #### PowerShell
 
 Add this to the bottom of your `$PROFILE`
 
 ```powershell
-. "$HOME/.jumpscripts/powershell/regular.ps1"
+. "$HOME/.jumpscripts/jump.ps1"
 ```
 
 If this fails to load, you may need to first update your exection policy to allow script execution.
@@ -75,12 +65,13 @@ j -g          # List all bookmarks, or print a bookmark's path if a name is prov
 
 In Powershell, Jump follows the standard Verb-Noun naming convention. The commands are:
 
-| Alias | Full Name       | Effect                                               |
-| ----- | --------------- | ---------------------------------------------------- |
-| j     | Open-Bookmark   | Go to the bookmark                                   |
-| jc    | Add-Bookmark    | Create a new bookmark to working directory           |
-| jr    | Remove-Bookmark | Delete a bookmark                                    |
-| jg    | Get-Bookmark    | Print all bookmarks, or a given bookmark if provided |
+| Alias | Full Name          | Effect                                                         |
+| ----- | ------------------ | -------------------------------------------------------------- |
+| j     | Open-Bookmark      | Go to the bookmark                                             |
+| jc    | Add-Bookmark       | Create a new bookmark to working directory                     |
+| jr    | Remove-Bookmark    | Delete a bookmark                                              |
+| jg    | Get-Bookmark       | Print all bookmarks, or a given bookmark if provided           |
+| ju    | Update-Bookmark    | Updates an existing bookmark to point to the working directory |
 
 ## License
 
