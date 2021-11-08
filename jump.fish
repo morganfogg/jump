@@ -23,25 +23,6 @@ switch (uname -sv)
     function __jump_list_bookmarks_script; column -t "$JUMPFILE"; end
 end
 
-set __JUMP_AWK_SHELL_QUOTE '
-    function shell_quote(s,
-        SINGLE, QSINGLE, i, X, n, ret)
-    {
-        if (s == "")
-            return "\"\""
-
-        SINGLE = "\x27"  # single quote
-        QSINGLE = "\"\x27\""
-        n = split(s, X, SINGLE)
-
-        ret = SINGLE X[1] SINGLE
-        for (i = 2; i <= n; i++)
-            ret = ret QSINGLE SINGLE X[i] SINGLE
-
-        return ret
-    }
-    '
-
 set __JUMP_AWK_GET_BOOKMARK 'NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
 set __JUMP_AWK_REMOVE_BOOKMARAK 'NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
 
@@ -105,7 +86,7 @@ function jump
                 return 1
             end
             if [ -n "$1" ]
-                set match (awk -F "\t" -v name="$1" "$SHELL_QUOTE"'
+                set match (awk -F "\t" -v name="$1" '
                     NR > 1 && tolower(name) == tolower($1) {
                         print $2
                         exit
