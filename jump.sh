@@ -1,9 +1,9 @@
 # Jump - Bookmark directories in the terminal (Bash/Zsh version)
 # https://github.com/morganfogg/jump
 
-case "$(uname -a)" in
-  *Microsoft*|*WSL* )
-    JUMPFILE="$(wslpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
+case "$(tr '[:upper:]' '[:lower:]' </proc/version)" in
+  *microsoft*|*wsl* )
+    JUMPFILE="$(wslpath -u "$(cmd.exe /C 'echo %USERPROFILE%\\jump.tsv' 2>/dev/null)" | tr -d '\r')"
     __jump_path_to_native() { wslpath -w "$1"; }
     __jump_path_from_native() { wslpath -u "$1"; }
     __jump_list_bookmarks_script() {
@@ -14,7 +14,7 @@ $(cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | xargs -0 -n1 wslpath -u)
 EOF
     }
   ;;
-  *CYGWIN*|*MINGW* )
+  *cygwin*|*mingw* )
     JUMPFILE="$(cygpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
     __jump_path_to_native() { cygpath -w "$1"; }
     __jump_path_from_native() { cygpath -u "$1"; }

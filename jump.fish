@@ -1,15 +1,15 @@
 # Jump - Bookmark directories in the terminal (Fish version).
 # https://github.com/morganfogg/jump
 
-switch (uname -a)
-  case '*Microsoft*' '*WSL*'
-    set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
+switch (string lower </proc/version)
+  case '*microsoft*' '*wsl*'
+    set JUMPFILE (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv' 2>/dev/null) | tr -d '\r')
     function __jump_path_to_native; wslpath -w "$argv[1]"; end
     function __jump_path_from_native; wslpath -u "$argv[1]"; end
     function __jump_list_bookmarks_script
         paste (cut -f 1 "$JUMPFILE" | tail -n +2 | psub) (cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | xargs -0 -n1 wslpath -u | psub) | column -t
     end
-  case '*CYGWIN*' '*MINGW*'
+  case '*cygwin*' '*mingw*'
     set JUMPFILE (cygpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
     function __jump_path_to_native; wslpath -w "$argv[1]"; end
     function __jump_path_from_native; wslpath -u "$argv[1]"; end
