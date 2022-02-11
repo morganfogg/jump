@@ -11,8 +11,8 @@ switch (string lower </proc/version)
     end
   case '*cygwin*' '*mingw*'
     set JUMPFILE (cygpath -u (cmd.exe /c 'echo %USERPROFILE%\\jump.tsv') | tr -d '\r')
-    function __jump_path_to_native; wslpath -w "$argv[1]"; end
-    function __jump_path_from_native; wslpath -u "$argv[1]"; end
+    function __jump_path_to_native; cygpath -w "$argv[1]"; end
+    function __jump_path_from_native; cygpath -u "$argv[1]"; end
     function __jump_list_bookmarks_script
         paste (cut -f 1 "$JUMPFILE" | tail -n +2 | psub) (cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | cygpath -u -f - | psub) | column -t
     end
