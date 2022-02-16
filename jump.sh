@@ -1,125 +1,84 @@
-# Jump - Bookmark directories in the terminal (Bash/Zsh version)
-# https://github.com/morganfogg/jump
-
 case "$(tr '[:upper:]' '[:lower:]' </proc/version)" in
   *microsoft*|*wsl* )
-    JUMPFILE="$(wslpath -u "$(cmd.exe /C 'echo %USERPROFILE%\\jump.tsv' 2>/dev/null)" | tr -d '\r')"
+    JUMP_DIR="$(wslpath -u "$(cmd.exe /C 'echo %USERPROFILE%\\jumppoints' 2>/dev/null)" | tr -d '\r')"
     __jump_path_to_native() { wslpath -w "$1"; }
     __jump_path_from_native() { wslpath -u "$1"; }
-    __jump_list_bookmarks_script() {
-paste /dev/fd/3 3<<-EOF /dev/fd/4 4<<-EOF | column -t
-$(cut -f 1 "$JUMPFILE" | tail -n +2)
-EOF
-$(cut -f 2 "$JUMPFILE" | tail -n +2 | tr '\n' '\0' | xargs -0 -n1 wslpath -u)
-EOF
-    }
   ;;
   *cygwin*|*mingw* )
-    JUMPFILE="$(cygpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jump.tsv')" | tr -d '\r')"
+    JUMP_DIR="$(cygpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jumppoints')" | tr -d '\r')"
     __jump_path_to_native() { cygpath -w "$1"; }
     __jump_path_from_native() { cygpath -u "$1"; }
-    __jump_list_bookmarks_script() {
-paste /dev/fd/3 3<<-EOF /dev/fd/4 4<<-EOF | column -t
-$(cut -f 1 "$JUMPFILE" | tail -n +2)
-EOF
-$(cut -f 2 "$JUMPFILE" | tail -n +2 | cygpath -u -f -)
-EOF
-    }
   ;;
   *)
-    JUMPFILE="$HOME/jump.tsv"
+    JUMP_DIR="$HOME/jumppoints"
     __jump_path_to_native() { printf "%s\n" "$1"; }
     __jump_path_from_native() { printf "%s\n" "$1"; }
-    __jump_list_bookmarks_script() { column -t "$JUMPFILE"; }
   ;;
 esac
 
-__JUMP_AWK_GET_BOOKMARK='NF > 1 && NR > 1 && tolower(name) == tolower($1) {print $2; exit}'
-__JUMP_AWK_REMOVE_BOOKMARAK='NF > 1 && NR > 1 && tolower(name) != tolower($1) {print $0}'
 
 jump() {
-    if  [ ! -e "$JUMPFILE" ] ; then
-        printf 'Name\tPath\n' > "$JUMPFILE"
+    if [ ! -d "$JUMP_DIR" ]; then
+        mkdir "$JUMP_DIR"
     fi
-
-    sed -i 's/\r\n/\n/g' "$JUMPFILE" # Correct any CRLF line endings
-
-    local match
-
-    case $1 in
+    case "$1" in
         -c)
             if [ -z "$2" ]; then
-                >&2 printf 'Specify the name of the bookmark\n'
+                echo "Specify a name for the bookmark" >&2
                 return 1
-            elif [ "$#" -gt 2 ]; then
-                >&2 printf 'Too many arguments\n'
-                return 1
+            elif [ "${2#*/}" != "$2" ]; then
+                echo "Bookmark name may not contain slashes"
+            elif [ "$2" = "." ] || [ "$2" = ".." ]; then
+                echo "Bookmark name invalid."
             fi
-            local native_wd
-            native_wd="$(__jump_path_to_native "$(pwd)")"
-
-            match="$(awk -F '\t' -v name="$2" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")"
-            if [ -z "$match" ]; then
-                printf '%s\t%s\n' "$2" "$native_wd" >> "$JUMPFILE"
-                printf 'Created bookmark %s to %s\n' "$2" "$(pwd)"
-            else
-                printf 'You already have a bookmark with that name. Do you want to replace it? (y/N): \n'
+            if [ -e "$JUMP_DIR/$2" ]; then
+                printf 'You already have a bookmark with that name. Do you want to replace it? (y/N):\n'
                 read -r REPLY
                 case "$REPLY" in
                     y|Y|yes|Yes|YES)
-                        local updated
-                        updated="$(awk -F '\t' -v name="$2" "$__JUMP_AWK_REMOVE_BOOKMARAK" "$JUMPFILE")"
-                        printf 'Name\tPath\n' > "$JUMPFILE"
-                        printf '%s\n' "$updated" >> "$JUMPFILE"
-                        printf '%s\t%s\n' "$2" "$native_wd" >> "$JUMPFILE"
-
-                        printf 'Updated bookmark %s to %s\n' "$2" "$(pwd)"
+                        : # Continue
                     ;;
                     *)
-                        >&2 printf 'Canceled\n'
+                        printf 'Canceled\n' >&2
                         return 1
                     ;;
                 esac
             fi
+
+            __jump_path_to_native "$(pwd)" > "$JUMP_DIR/$2"
+            printf "Created bookmark %s to %s\n" "$2" "$(pwd)"
         ;;
         -d)
-            if [ -z "$2" ]; then
-                >&2 printf 'Specify the name of the bookmark\n'
-                return 1
-            elif [ "$#" -gt 2 ]; then
-                >&2 printf 'Too many arguments\n'
-                return 1
-            fi
-            match="$(awk -F '\t' -v name="$2" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")"
-            if [ -z "$match" ]; then
-                >&2 printf 'No such bookmark\n'
-                return 1
+            if [ -n "$2" ]; then
+                if [ -e "$JUMP_DIR"/"$2" ]; then
+                    rm -- "$JUMP_DIR"/"$2"
+                    printf "Deleted bookmark %s\n" "$2"
+                else
+                    printf 'No such bookmark\n'
+                    return 1
+                fi
             else
-                local updated
-                updated="$(awk -F '\t' -v name="$2" "$__JUMP_AWK_REMOVE_BOOKMARAK" "$JUMPFILE")"
-                printf 'Name\tPath\n%s\n' "$updated" > "$JUMPFILE"
-                printf 'Bookmark deleted\n'
+                printf 'Specify the name of the bookmark to delete\n'
+                return 1
             fi
         ;;
         -g)
-            if [ "$#" -gt 2 ]; then
-                >&2 printf 'Too many arguments\n';
-                return 1;
-            fi
             if [ -n "$2" ]; then
-                match="$(awk -F "\t" -v name="$2" '
-                    NR > 1 && tolower(name) == tolower($1) {
-                        print $2
-                        exit
-                    }
-                ' "$JUMPFILE")"
-                if [ -z "$match" ]; then
-                    >&2 printf 'No such bookmark\n'
+                if [ -e "$JUMP_DIR"/"$2" ]; then
+                    __jump_path_from_native "$(cat "$JUMP_DIR"/"$2")"
+                else
+                    printf 'No such bookmark\n'
                     return 1
                 fi
-                __jump_path_from_native "$match"
             else
-               __jump_list_bookmarks_script
+                {
+                    for file in "$JUMP_DIR"/*; do
+                        if [ -f "$file" ]; then
+                            read -r line < "$file"
+                            printf "%s\t%s\n" "${file##*/}" "$(__jump_path_from_native "$line")"
+                        fi
+                    done
+                } | column -t
             fi
         ;;
         --help|"")
@@ -128,32 +87,24 @@ jump() {
             printf 'Optional flags:\n'
             printf '  -d    Delete the specified bookmark\n'
             printf '  -c    Create a bookmark with the given name in the current directory\n'
-            printf '  -l    List all available bookmarks\n'
+            printf '  -g    List all available bookmarks\n'
+            return 0
         ;;
         -?*)
-            printf 'Unrecognized option. See "jump --help"\n'
+            echo "Unknown option. See jump --help"
         ;;
         *)
-            if [ "$#" -gt 1 ]; then
-                >&2 printf 'Too many arguments\n'
+            if [ -z "$1" ]; then
+                echo "Specify the bookmark to jump to" >&2
+                return 1
+            elif [ ! -e "$JUMP_DIR"/"$1" ]; then
+                echo "No such bookmark" >&2
                 return 1
             fi
-            local result_count;
-            match="$(awk -F '\t' -v name="$1" "$__JUMP_AWK_GET_BOOKMARK" "$JUMPFILE")"
-            result_count="$(printf '%s' "$match" | wc -l)"
-            if [ -z "$match" ]; then
-                >&2 printf 'No such bookmark\n'
-                return 1
-            elif [ "$result_count" -gt 1 ]; then
-                >&2 printf 'Jumpfile invalid: Duplicate entries of bookmark %s\n. Please delete this bookmark and then recreate it, or edit the jumpfile manually to remove the duplicate.\n' "$1"
-                return 1
-            fi
-            cd "$(__jump_path_from_native "$match")" || return 1
+            cd "$( __jump_path_from_native "$(cat "$JUMP_DIR/$1")")" || return 1
         ;;
     esac
 }
-
-alias j=jump
 
 if [ -n "$BASH_VERSION" ]; then
     # Bash completions
@@ -161,7 +112,7 @@ if [ -n "$BASH_VERSION" ]; then
         local WORD
         local COMPLETIONS
         WORD="${COMP_WORDS[COMP_CWORD]}"
-        COMPLETIONS=$(awk -F '\t' 'NF > 1 && NR > 1 {print $1}' "$JUMPFILE")
+        COMPLETIONS=$(find "$JUMP_DIR" -type f | awk -F/ '{print $NF}')
         COMPREPLY=( $(compgen -W "$COMPLETIONS" -- "$WORD") )
     }
 
@@ -172,10 +123,12 @@ elif [ -n "$ZSH_VERSION" ]; then
     # Zsh completions
     _jump_completion() {
         local COMPLETIONS
-        COMPLETIONS=$(awk -F '\t' 'NF > 1 && NR > 1 {print $1}' "$JUMPFILE")
+        COMPLETIONS="$(find "$JUMP_DIR" -type f | awk -F/ '{print $NF}')"
         _arguments -C "1: :($COMPLETIONS)" "2: :($COMPLETIONS)"
     }
 
     compdef _jump_completion j
     compdef _jump_completion jump
 fi
+
+alias j=jump
