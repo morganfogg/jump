@@ -1,133 +1,133 @@
 # Jump - Bookmark directories in the terminal (PowerShell version)
 # https://github.com/morganfogg/jump
 
-if (!(Test-Path "$HOME/jump.tsv")) {
-  New-Item -Path $HOME -Name "jump.tsv" -Type "file" -Value "Name`tPath"
+if (!(Test-Path "$HOME/jumppoints")) {
+    New-Item -Path $HOME -Name "jumppoints" -Type Directory
 }
 
 function Open-Bookmark {
-  [CmdletBinding()]
-  param (
-    [Parameter(Mandatory = $true)]
-    [string] $Name
-  )
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Name
+    )
 
-  process {
-    try {
-      $result = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv") | Where-Object -Property "Name" -Like $Name;
-      if ($result.Count -eq 0) {
-        throw [Exception]::new("No such bookmark exists");
-      }
+    process {
+        try {
+            if (!(Test-Path "$HOME/jumppoints/$Name")) {
+                throw [Exception]::new("No such bookmark exists");
+            }
 
-      Set-Location $result[0].Path;
+            Set-Location $(Get-Content "$HOME/jumppoints/$Name")
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
     }
-    catch {
-      $PSCmdlet.ThrowTerminatingError($_);
-    }
-  }
 }
 
 function Remove-Bookmark {
-  [CmdletBinding()]
-  param (
-    [Parameter(Mandatory = $true)]
-    [string] $Name
-  )
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Name
+    )
 
-  process {
-    try {
-      $oldData = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
-      $newData = $oldData | Where-Object -Property "Name" -NotLike $Name;
+    process {
+        try {
+            if (!(Test-Path "$HOME/jumppoints/$Name")) {
+                throw [Exception]::new("No such bookmark to remove");
+            }
 
-      if ($oldData.length -eq $newData.length) {
-        throw [Exception]::new("No such bookmark to remove");
-      }
-
-      $newData | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
+            Remove-Item "$HOME/jumppoints/$Name"
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
     }
-    catch {
-      $PSCmdlet.ThrowTerminatingError($_);
-    }
-  }
 }
 
 function Get-Bookmark {
-  [CmdletBinding()]
-  param (
-    [string] $Name
-  )
+    [CmdletBinding()]
+    param (
+        [string] $Name
+    )
 
-  process {
-    try {
-      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
+    process {
+        try {
+            if (![string]::IsNullOrWhiteSpace($Name)) {
+                if (!(Test-Path "$HOME/jumppoints/$Name")) {
+                    throw [Exception]::new("No such bookmark.");
+                }
 
-      if (![string]::IsNullOrWhiteSpace($name)) {
-        $data = $data | Where-Object -Property "Name" -Like $Name;
-      }
+                $data = [PSCustomObject]@{
+                    Name     =$Name;
+                    Location =$(Get-Content "$HOME/jumppoints/$Name");
+                }
+            }
+            else {
+                $data = Get-ChildItem -Path "$HOME/jumppoints" | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name     =$_.BaseName;
+                        Location =$(Get-Content $_);
+                    }
+                }
+            }
 
-      return $data;
+            return $data;
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
     }
-    catch {
-      $PSCmdlet.ThrowTerminatingError($_);
-    }
-  }
 }
 
 function Update-Bookmark {
-  [CmdletBinding()]
-  param (
-    [Parameter(Mandatory = $true)]
-    [string] $Name
-  )
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Name
+    )
 
-  process {
-    try {
-      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
-      $results = $data | Where-Object -Property "Name" -Like $Name;
-      if ($results.length -eq 0) {
-        throw [Exception]::new("No such bookmark to update");
-      }
-      $results[0].Path = Get-Location;
-      $data | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
+    process {
+        try {
+            if (!(Test-Path "$HOME/jumppoints/$Name")) {
+                throw [Exception]::new("No such bookmark to update");
+            }
+
+            Get-Location | Out-File "$HOME/jumppoints/$Name"
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
     }
-    catch {
-      $PSCmdlet.ThrowTerminatingError($_);
-    }
-  }
 }
 
 function Add-Bookmark {
-  [CmdletBinding()]
-  param (
-    [Parameter(Mandatory = $true)]
-    [string] $Name
-  )
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string] $Name
+    )
 
-  process {
-    try {
-      $data = @(Import-Csv -Header 'Name', 'Path' -Delimiter "`t" "$HOME/jump.tsv");
-      $results = $data | Where-Object -Property "Name" -Like $Name;
-      if ($results.length -ne 0) {
-        throw [Exception]::new("A bookmark with that name already exists");
-      }
+    process {
+        try {
+            if (Test-Path "$HOME/jumppoints/$Name") {
+                throw [Exception]::new("Bookmark already exists");
+            }
 
-      $data += New-Object PsObject -Property @{
-        Name = $name
-        Path = Get-Location
-      };
+            Get-Location | Out-File "$HOME/jumppoints/$Name"
 
-      Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
-
-      $data | Select-Object "Name", "Path" | ConvertTo-Csv -Delimiter "`t" -UseQuotes Never | Select-Object -skip 1 | Set-Content "$HOME/jump.tsv"
+            Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
     }
-    catch {
-      $PSCmdlet.ThrowTerminatingError($_);
-    }
-  }
 }
 
 $bookmarkCompleter = {
-  param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
 
   (Get-Bookmark).Name | Where-Object { $_ -like "$wordToComplete*" }
 }
@@ -142,3 +142,4 @@ Set-Alias jr Remove-Bookmark;
 Set-Alias jg Get-Bookmark;
 Set-Alias jc Add-Bookmark;
 Set-Alias ju Update-Bookmark
+
