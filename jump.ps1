@@ -95,7 +95,7 @@ function Update-Bookmark {
                 throw [Exception]::new("No such bookmark to update");
             }
 
-            Get-Location | Out-File "$HOME/jumppoints/$Name"
+            (Get-Location).Path | Out-File "$HOME/jumppoints/$Name"
         }
         catch {
             $PSCmdlet.ThrowTerminatingError($_);
@@ -116,7 +116,7 @@ function Add-Bookmark {
                 throw [Exception]::new("Bookmark already exists");
             }
 
-            Get-Location | Out-File "$HOME/jumppoints/$Name"
+            (Get-Location).Path | Out-File "$HOME/jumppoints/$Name"
 
             Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
         }
