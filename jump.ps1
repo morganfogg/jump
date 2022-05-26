@@ -95,7 +95,7 @@ function Update-Bookmark {
                 throw [Exception]::new("No such bookmark to update");
             }
 
-            (Get-Location).Path | Out-File "$HOME/jumppoints/$Name"
+            (Get-Location).Path | Out-File -NoNewline "$HOME/jumppoints/$Name"
         }
         catch {
             $PSCmdlet.ThrowTerminatingError($_);
@@ -116,9 +116,31 @@ function Add-Bookmark {
                 throw [Exception]::new("Bookmark already exists");
             }
 
-            (Get-Location).Path | Out-File "$HOME/jumppoints/$Name"
+            (Get-Location).Path | Out-File -NoNewline "$HOME/jumppoints/$Name"
 
             Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_);
+        }
+    }
+}
+
+function Prune-Bookmarks {
+    [CmdletBinding()]
+    param()
+
+    process {
+        try {
+            $count = 0
+            Get-ChildItem -Path "$HOME/jumppoints" | ForEach-Object {
+                $destination = Get-Content $_
+                if (!(Test-Path $destination)) {
+                    Remove-Item $_
+                    $count++;
+                }
+            }
+            Write-Host "Pruned $count bookmarks"
         }
         catch {
             $PSCmdlet.ThrowTerminatingError($_);
