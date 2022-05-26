@@ -31,7 +31,7 @@ jump() {
             elif [ "$2" = "." ] || [ "$2" = ".." ]; then
                 echo "Bookmark name invalid."
             fi
-            if [ -e "$JUMP_DIR/$2" ]; then
+            if [ -e "$JUMP_DIR/$2" ] && [ "$2" != '-' ]; then
                 printf 'You already have a bookmark with that name. Do you want to replace it? (y/N):\n'
                 read -r REPLY
                 case "$REPLY" in
@@ -81,13 +81,27 @@ jump() {
                 } | column -t
             fi
         ;;
+        --prune) (
+            counter="0"
+            for file in "$JUMP_DIR"/*; do
+                if [ -f "$file" ]; then
+                    read -r location < "$file"
+                    if [ ! -d "$(__jump_path_from_native "$location")" ]; then
+                        rm "$file";
+                        counter="$(("$counter" + 1))"
+                    fi
+                fi
+            done
+            printf "Pruned %s bookmarks(s)\n" "$counter"
+        );;
         --help|"")
             printf 'Jump: Bookmark directories in the terminal\n\n'
             printf 'usage: jump [options] BOOKMARK\n\n'
             printf 'Optional flags:\n'
-            printf '  -d    Delete the specified bookmark\n'
-            printf '  -c    Create a bookmark with the given name in the current directory\n'
-            printf '  -g    List all available bookmarks\n'
+            printf '  -d       Delete the specified bookmark\n'
+            printf '  -c       Create a bookmark with the given name in the current directory\n'
+            printf '  -g       List all available bookmarks\n'
+            printf '  --prune  Delete any bookmarks that point to non-existant directories.'
             return 0
         ;;
         -?*)

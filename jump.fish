@@ -86,7 +86,16 @@ function jump
                     end
                 end | column -t
             end
-
+        case '--prune'
+            set -l count 0
+            for file in "$JUMP_DIR"/*
+                read -l contents < "$file"
+                if [ ! -d (__jump_path_from_native "$contents") ]
+                    rm "$file"
+                    set count (math $count + 1)
+                end
+            end
+            printf 'Pruned %s bookmark(s)' "$count"
         case '--help' ''
             printf 'Jump: Bookmark directories in the terminal\n\n'
             printf 'usage: jump [options] BOOKMARK\n\n'
