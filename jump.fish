@@ -103,6 +103,7 @@ function jump
             printf '  -d    Delete the specified bookmark\n'
             printf '  -c    Create a bookmark with the given name in the current directory\n'
             printf '  -l    List all available bookmarks\n'
+            printf '  --prune  Delete any bookmarks that point to non-existant directories.\n'
         case '-?*'
             echo 'Unrecognized option. See "jump --help"'
         case '*'
