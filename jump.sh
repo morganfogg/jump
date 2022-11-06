@@ -4,7 +4,7 @@ case "$(tr '[:upper:]' '[:lower:]' </proc/version)" in
     __jump_path_to_native() { wslpath -w "$1"; }
     __jump_path_from_native() { wslpath -u "$1"; }
   ;;
-  *cygwin*|*mingw* )
+  *cygwin*|*mingw*|*msys* )
     JUMP_DIR="$(cygpath -u "$(cmd.exe /c 'echo %USERPROFILE%\\jumppoints')" | tr -d '\r')"
     __jump_path_to_native() { cygpath -w "$1"; }
     __jump_path_from_native() { cygpath -u "$1"; }
