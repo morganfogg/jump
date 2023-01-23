@@ -7,7 +7,7 @@ switch (string lower </proc/version)
     function __jump_path_to_native; wslpath -w "$argv[1]"; end
     function __jump_path_from_native; wslpath -u "$argv[1]"; end
   case '*cygwin*' '*mingw*' '*msys*'
-    set JUMP_DIR (cygpath -u (cmd.exe /c 'echo %USERPROFILE%\\jumppoints') | tr -d '\r')
+    set JUMP_DIR (MSYS2_ARG_CONV_EXCL="*" cygpath -u (cmd.exe /c 'echo %USERPROFILE%\\jumppoints') | tr -d '\r')
     function __jump_path_to_native; cygpath -w "$argv[1]"; end
     function __jump_path_from_native; cygpath -u "$argv[1]"; end
   case '*'
