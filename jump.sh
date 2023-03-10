@@ -74,7 +74,7 @@ jump() {
                 {
                     for file in "$JUMP_DIR"/*; do
                         if [ -f "$file" ]; then
-                            read -r line < "$file"
+                            line="$(cat "$file")"
                             printf "%s\t%s\n" "${file##*/}" "$(__jump_path_from_native "$line")"
                         fi
                     done
@@ -85,7 +85,7 @@ jump() {
             counter="0"
             for file in "$JUMP_DIR"/*; do
                 if [ -f "$file" ]; then
-                    read -r location < "$file"
+                    location="$(cat "$file")"
                     if [ ! -d "$(__jump_path_from_native "$location")" ]; then
                         rm "$file";
                         counter="$(("$counter" + 1))"
@@ -126,8 +126,8 @@ if [ -n "$BASH_VERSION" ]; then
         local WORD
         local COMPLETIONS
         WORD="${COMP_WORDS[COMP_CWORD]}"
-        COMPLETIONS=$(find "$JUMP_DIR" -type f | awk -F/ '{print $NF}')
-        COMPREPLY=( $(compgen -W "$COMPLETIONS" -- "$WORD") )
+        COMPLETIONS="$(find "$JUMP_DIR" -type f | awk -F/ '{print $NF}')"
+        mapfile -t COMPREPLY < <(compgen -W "$COMPLETIONS" -- "$WORD")
     }
 
     complete -F _jump_completion jump
