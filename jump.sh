@@ -31,9 +31,11 @@ jump() {
                 echo "Specify a name for the bookmark" >&2
                 return 1
             elif [ "${2#*/}" != "$2" ]; then
-                echo "Bookmark name may not contain slashes"
+                echo "Bookmark name may not contain slashes" >&2;
+                return 1
             elif [ "$2" = "." ] || [ "$2" = ".." ]; then
-                echo "Bookmark name invalid."
+                echo "Bookmark name invalid." >&2;
+                return 1
             fi
             if [ -e "$JUMP_DIR/$2" ] && [ "$2" != '-' ]; then
                 printf 'You already have a bookmark with that name. Do you want to replace it? (y/N):\n'
