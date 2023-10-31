@@ -18,6 +18,10 @@ esac
 
 
 jump() {
+    if [ -z "$JUMP_DIR" ]; then
+        echo "JUMP_DIR variable is not set. Please ensure that it is set correctly by this script to use it" >&2;
+        return 1
+    fi
     if [ ! -d "$JUMP_DIR" ]; then
         mkdir "$JUMP_DIR"
     fi
@@ -54,11 +58,11 @@ jump() {
                     rm -- "$JUMP_DIR"/"$2"
                     printf "Deleted bookmark %s\n" "$2"
                 else
-                    printf 'No such bookmark\n'
+                    echo 'No such bookmark' >&2
                     return 1
                 fi
             else
-                printf 'Specify the name of the bookmark to delete\n'
+                echo 'Specify the name of the bookmark to delete' >&2
                 return 1
             fi
         ;;
@@ -67,7 +71,7 @@ jump() {
                 if [ -e "$JUMP_DIR"/"$2" ]; then
                     __jump_path_from_native "$(cat "$JUMP_DIR"/"$2")"
                 else
-                    printf 'No such bookmark\n'
+                    echo 'No such bookmark' >&2
                     return 1
                 fi
             else
@@ -78,7 +82,7 @@ jump() {
                             printf "%s\t%s\n" "${file##*/}" "$(__jump_path_from_native "$line")"
                         fi
                     done
-                } | column -t
+                } | { if type column >/dev/null 2>&1; then column -t; else cat; fi; }
             fi
         ;;
         --prune) (
