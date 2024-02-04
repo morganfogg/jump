@@ -112,6 +112,14 @@ function Add-Bookmark {
 
     process {
         try {
+            if (("$Name" -like "..") -or ("$Name" -like ".")) {
+                throw [Exception]::new("Invalid bookmark name.");
+            }
+
+            if (("$Name" -like "*/*") -or ("$Name" -like "*\*")) {
+                throw [Exception]::new("Bookmark names may not contain slashes.");
+            }
+
             if (Test-Path "$HOME/jumppoints/$Name") {
                 throw [Exception]::new("Bookmark already exists");
             }

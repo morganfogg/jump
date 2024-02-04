@@ -1,3 +1,6 @@
+# Jump - Bookmark directories in the terminal (SH version)
+# https://github.com/morganfogg/jump
+
 case "$(tr '[:upper:]' '[:lower:]' </proc/version)" in
   *microsoft*|*wsl* )
     JUMP_DIR="$(wslpath -u "$(cmd.exe /C 'echo %USERPROFILE%\\jumppoints' 2>/dev/null)" | tr -d '\r')"
@@ -138,7 +141,6 @@ if [ -n "$BASH_VERSION" ]; then
 
     complete -F _jump_completion jump
     complete -F _jump_completion j
-
 elif [ -n "$ZSH_VERSION" ]; then
     # Zsh completions
     _jump_completion() {
