@@ -26,10 +26,16 @@ function jump
     switch "$argv[1]"
         case '-c'
             if [ -z "$argv[2]" ]
-                echo 'Specify the name of the bookmark' >&2
+                echo 'Specify the name of the bookmark\n' >&2
                 return 1
-            else if [ (count $argv) -gt 2 ]; then
+            else if [ (count $argv) -gt 2 ]
                 printf 'Too many arguments\n' >&2
+                return 1
+            else if printf %s "$argv[2]" |  grep -Fq '/'
+                printf 'Bookmark name may not contain a slash.\n' >&2
+                return 1
+            else if [ "$argv[2]" = '..' ] || [ "$argv[2]" = '.' ]
+                printf 'Invalid bookmark name\n' >&2
                 return 1
             end
             set match "$argv[2]"
