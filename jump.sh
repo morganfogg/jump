@@ -1,7 +1,7 @@
 # Jump - Bookmark directories in the terminal (SH version)
 # https://github.com/morganfogg/jump
 
-case "$(tr '[:upper:]' '[:lower:]' </proc/version)" in
+case "$(uname -a | tr '[:upper:]' '[:lower:]')" in
   *microsoft*|*wsl* )
     JUMP_DIR="$(wslpath -u "$(cmd.exe /C 'echo %USERPROFILE%\\jumppoints' 2>/dev/null)" | tr -d '\r')"
     __jump_path_to_native() { wslpath -w "$1"; }
