@@ -1,7 +1,7 @@
 # Jump - Bookmark directories in the terminal (Fish version).
 # https://github.com/morganfogg/jump
 
-switch (string lower </proc/version)
+switch (uname -a | string lower)
   case '*microsoft*' '*wsl*'
     set JUMP_DIR (wslpath -u (cmd.exe /c 'echo %USERPROFILE%\\jumppoints' 2>/dev/null) | tr -d '\r')
     function __jump_path_to_native; wslpath -w "$argv[1]"; end

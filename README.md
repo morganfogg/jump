@@ -61,6 +61,7 @@ j -c [name]   # Add a new bookmark which points to the working directory
 j [name]      # Go to bookmark
 j -r [name]   # Delete bookmark
 j -g          # List all bookmarks, or print a bookmark's path if a name is provided
+j --prune     # Delete any bookmark which no longer points to a valid location on the filesystem.
 ```
 
 In Powershell, Jump follows the standard Verb-Noun naming convention. The commands are:
