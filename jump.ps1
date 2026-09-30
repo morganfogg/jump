@@ -1,4 +1,4 @@
-# Jump - Bookmark directories in the terminal (PowerShell version)
+# jump - bookmark directories in the terminal (powershell version)
 # https://github.com/morganfogg/jump
 
 if (!(Test-Path "$HOME/jumppoints")) {
@@ -69,7 +69,7 @@ function Get-Bookmark {
                 $data = Get-ChildItem -Path "$HOME/jumppoints" | ForEach-Object {
                     [PSCustomObject]@{
                         Name     =$_.BaseName;
-                        Location =$(Get-Content $_);
+                        Location =$(Get-Content $_.FullName);
                     }
                 }
             }
@@ -95,7 +95,7 @@ function Update-Bookmark {
                 throw [Exception]::new("No such bookmark to update");
             }
 
-            (Get-Location).Path | Out-File -NoNewline "$HOME/jumppoints/$Name"
+            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path)
         }
         catch {
             $PSCmdlet.ThrowTerminatingError($_);
@@ -124,8 +124,7 @@ function Add-Bookmark {
                 throw [Exception]::new("Bookmark already exists");
             }
 
-            (Get-Location).Path | Out-File -NoNewline "$HOME/jumppoints/$Name"
-
+            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path)
             Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
         }
         catch {
@@ -142,9 +141,9 @@ function Prune-Bookmarks {
         try {
             $count = 0
             Get-ChildItem -Path "$HOME/jumppoints" | ForEach-Object {
-                $destination = Get-Content $_
+                $destination = Get-Content $_.FullName
                 if (!(Test-Path $destination)) {
-                    Remove-Item $_
+                    Remove-Item $_.FullName
                     $count++;
                 }
             }

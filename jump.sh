@@ -22,7 +22,7 @@ esac
 
 jump() {
     if [ -z "$JUMP_DIR" ]; then
-        echo "JUMP_DIR variable is not set. Please ensure that it is set correctly by this script to use it" >&2;
+        echo "JUMP_DIR variable is not set. Please ensure that it is set correctly by this script to use it" >&2
         return 1
     fi
     if [ ! -d "$JUMP_DIR" ]; then
@@ -33,22 +33,22 @@ jump() {
             if [ -z "$2" ]; then
                 echo "Specify a name for the bookmark" >&2
                 return 1
-            elif [ "${2#*/}" != "$2" ]; then
-                echo "Bookmark name may not contain slashes" >&2;
+            elif [ "${2#*/}" != "$2" ] || [ "${2%/*}" != "$2" ]; then
+                echo "Bookmark name may not contain slashes" >&2
                 return 1
             elif [ "$2" = "." ] || [ "$2" = ".." ]; then
-                echo "Bookmark name invalid." >&2;
+                echo "Bookmark name invalid." >&2
                 return 1
             fi
             if [ -e "$JUMP_DIR/$2" ] && [ "$2" != '-' ]; then
-                printf 'You already have a bookmark with that name. Do you want to replace it? (y/N):\n'
+                echo 'You already have a bookmark with that name. Do you want to replace it? (y/N):'
                 read -r REPLY
                 case "$REPLY" in
                     y|Y|yes|Yes|YES)
                         : # Continue
                     ;;
                     *)
-                        printf 'Canceled\n' >&2
+                        echo 'Canceled' >&2
                         return 1
                     ;;
                 esac
@@ -96,7 +96,7 @@ jump() {
                 if [ -f "$file" ]; then
                     location="$(cat "$file")"
                     if [ ! -d "$(__jump_path_from_native "$location")" ]; then
-                        rm "$file";
+                        rm "$file"
                         counter="$(("$counter" + 1))"
                     fi
                 fi
