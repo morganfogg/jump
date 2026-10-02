@@ -2,7 +2,7 @@
 # https://github.com/morganfogg/jump
 
 if (!(Test-Path "$HOME/jumppoints")) {
-    New-Item -Path $HOME -Name "jumppoints" -Type Directory
+    New-Item -Path $HOME -Name "jumppoints" -Type Directory | Out-Null
 }
 
 function Open-Bookmark {
@@ -95,7 +95,7 @@ function Update-Bookmark {
                 throw [Exception]::new("No such bookmark to update");
             }
 
-            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path)
+            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path) | Out-Null
         }
         catch {
             $PSCmdlet.ThrowTerminatingError($_);
@@ -124,7 +124,7 @@ function Add-Bookmark {
                 throw [Exception]::new("Bookmark already exists");
             }
 
-            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path)
+            New-Item -Force "$HOME/jumppoints/$Name" -Value ((Get-Location).Path) | Out-Null
             Write-Host ("Created bookmark '$Name' to folder '$(Get-Location)'");
         }
         catch {
